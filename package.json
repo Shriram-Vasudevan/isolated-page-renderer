@@ -4,7 +4,8 @@
   "description": "State-Synthesized UI Renderer - Render any page or component in isolation by automatically mocking all required inputs",
   "main": "dist/index.js",
   "bin": {
-    "state-render": "dist/cli/index.js"
+    "state-render": "dist/cli/index.js",
+    "sr": "dist/cli/index.js"
   },
   "scripts": {
     "build": "tsc",
