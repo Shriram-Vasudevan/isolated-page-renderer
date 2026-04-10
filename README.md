@@ -1,6 +1,6 @@
 # state-render
 
-Render any Next.js page or React component in complete isolation, without navigating through your app. The system automatically detects all dependencies (auth, API calls, route params, context providers) and generates realistic mock data to render a live preview.
+Renders Next.js page or React component in complete isolation with generated mock data.
 
 ## Quick Start
 
