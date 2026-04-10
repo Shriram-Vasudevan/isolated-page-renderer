@@ -1,4 +1,4 @@
-# state-render
+# isolated-page-renderer
 
 Renders Next.js page or React component in complete isolation with generated mock data.
 
