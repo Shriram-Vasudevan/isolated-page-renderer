@@ -59,6 +59,17 @@ export async function startPreviewServer(options: ServerOptions): Promise<{
   // Serve node_modules for CSS etc
   app.use('/node_modules', express.static(path.join(projectRoot, 'node_modules')));
 
+  // API fallback — if a fetch slips past the client interceptor, return JSON not HTML
+  app.all('/api/*', (req, res) => {
+    console.log(chalk.yellow(`  [fallback] Unintercepted API call: ${req.method} ${req.url}`));
+    res.status(200).json({
+      _stateRender: true,
+      message: 'This API call was not intercepted by the client runtime. Check mock endpoint patterns.',
+      method: req.method,
+      url: req.url,
+    });
+  });
+
   // Main page route - serve the preview
   app.get('*', (req, res) => {
     // Serve the preview HTML for all routes (SPA-style)
@@ -137,27 +148,30 @@ function generatePreviewHtml(analysis: AnalysisResult, scenario: Scenario): stri
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>state-render | ${componentName} [${scenario}]</title>
   <style>
-    /* Reset */
     *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; padding: 0; }
 
-    /* Loading state */
     #sr-loading {
       position: fixed; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      background: #1e1e2e; color: #cdd6f4;
-      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: #fff;
+      color: #1a1a1a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       z-index: 100000;
       transition: opacity 0.3s;
     }
+    @media (prefers-color-scheme: dark) {
+      #sr-loading { background: #111; color: #e5e5e5; }
+      .sr-spinner { border-color: #333 !important; border-top-color: #888 !important; }
+    }
     #sr-loading.hidden { opacity: 0; pointer-events: none; }
     .sr-spinner {
-      width: 40px; height: 40px;
-      border: 3px solid #313244;
-      border-top-color: #89b4fa;
+      width: 20px; height: 20px;
+      border: 2px solid #e5e5e5;
+      border-top-color: #888;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 16px;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 14px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -165,9 +179,9 @@ function generatePreviewHtml(analysis: AnalysisResult, scenario: Scenario): stri
 <body>
   <div id="sr-loading">
     <div style="text-align: center;">
-      <div class="sr-spinner"></div>
-      <div>Rendering <strong>${componentName}</strong></div>
-      <div style="color: #6c7086; margin-top: 4px;">scenario: ${scenario}</div>
+      <div class="sr-spinner" style="margin:0 auto 14px;"></div>
+      <div style="font-size:13px;font-weight:500;">${componentName}</div>
+      <div style="color:#999;margin-top:4px;font-size:12px;">${scenario}</div>
     </div>
   </div>
 
@@ -191,9 +205,10 @@ function generatePreviewHtml(analysis: AnalysisResult, scenario: Scenario): stri
       console.error('[state-render] Runtime error:', e.error);
       var el = document.getElementById('sr-loading');
       if (el) {
-        el.innerHTML = '<div style="text-align:center;max-width:600px;padding:20px;">' +
-          '<div style="color:#f38ba8;font-size:24px;margin-bottom:16px;">Render Error</div>' +
-          '<pre style="background:#313244;padding:16px;border-radius:8px;text-align:left;overflow:auto;white-space:pre-wrap;">' +
+        el.innerHTML = '<div style="text-align:center;max-width:520px;padding:20px;">' +
+          '<div style="font-size:14px;font-weight:600;margin-bottom:12px;">Render Error</div>' +
+          '<pre style="background:#f5f5f5;border:1px solid #e5e5e5;padding:14px;border-radius:6px;' +
+          'text-align:left;overflow:auto;white-space:pre-wrap;font-size:12px;color:#666;line-height:1.5;">' +
           e.message + '</pre></div>';
         el.classList.remove('hidden');
       }

@@ -81,11 +81,11 @@ export function generateClientRuntime(config: {
       if (mockMethod !== method && mockMethod !== 'unknown') continue;
 
       // Pattern matching (replace {param} with regex)
-      var regexStr = '^' + mockPattern
-        .replace(/\\{[^}]+\\}/g, '[^/]+')
-        .replace(/\\[/g, '\\\\[')
-        .replace(/\\]/g, '\\\\]')
-        .replace(/\\//g, '\\\\/') + '(\\\\?.*)?$';
+      // First escape special regex chars in the literal URL parts,
+      // then replace {param} placeholders with a capture group.
+      var escaped = mockPattern.replace(/\\//g, '\\\\/');
+      var regexStr = '^' + escaped
+        .replace(/\\{[^}]+\\}/g, '[^/]+') + '(\\\\?.*)?$';
 
       try {
         var regex = new RegExp(regexStr);
@@ -169,28 +169,73 @@ export function generateClientRuntime(config: {
   // === SCENARIO INDICATOR ===
   var indicator = document.createElement('div');
   indicator.id = 'state-render-indicator';
-  indicator.innerHTML = '<span style="font-weight:600;">state-render</span> | scenario: <strong>' +
-    __SR_CONFIG__.scenario + '</strong> | ' +
-    Object.keys(__SR_CONFIG__.apiMocks).length + ' mocked endpoints';
-  indicator.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1e1e2e;color:#cdd6f4;' +
-    'padding:8px 16px;font-family:monospace;font-size:12px;z-index:99999;display:flex;align-items:center;' +
-    'gap:12px;border-top:2px solid #89b4fa;';
+  indicator.style.cssText = [
+    'position:fixed', 'bottom:12px', 'left:50%', 'transform:translateX(-50%)',
+    'background:rgba(255,255,255,0.96)', 'color:#1a1a1a',
+    'border:1px solid rgba(0,0,0,0.08)', 'border-radius:8px',
+    'box-shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 12px rgba(0,0,0,0.04)',
+    'padding:6px 6px 6px 14px',
+    'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+    'font-size:12px', 'z-index:99999',
+    'display:flex', 'align-items:center', 'gap:10px',
+    'backdrop-filter:blur(8px)', '-webkit-backdrop-filter:blur(8px)',
+    'user-select:none',
+  ].join(';');
 
-  // Add scenario switcher buttons
+  // Build inner HTML
+  var endpointCount = Object.keys(__SR_CONFIG__.apiMocks).length;
+  var authLabel = __SR_CONFIG__.auth.isAuthenticated
+    ? (__SR_CONFIG__.auth.user && __SR_CONFIG__.auth.user.name ? __SR_CONFIG__.auth.user.name : 'authed')
+    : 'none';
+
+  var html = '';
+  // Logo mark
+  html += '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:0.5;">' +
+    '<rect x="1" y="1" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/>' +
+    '<path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+  // Metadata
+  html += '<span style="color:#888;font-size:11px;white-space:nowrap;">' +
+    endpointCount + ' mock' + (endpointCount !== 1 ? 's' : '') +
+    '<span style="margin:0 5px;opacity:0.3;">&middot;</span>' +
+    'auth: ' + authLabel +
+    '</span>';
+
+  // Divider
+  html += '<span style="width:1px;height:16px;background:rgba(0,0,0,0.08);flex-shrink:0;"></span>';
+
+  // Scenario buttons
   var scenarios = ['happy', 'empty', 'error', 'loading'];
-  var switcherHtml = ' | Switch: ';
   scenarios.forEach(function(s) {
     var isActive = s === __SR_CONFIG__.scenario;
-    switcherHtml += '<button onclick="window.__SR_SWITCH_SCENARIO__(\\'' + s + '\\')" style="' +
-      'background:' + (isActive ? '#89b4fa' : '#313244') + ';color:' + (isActive ? '#1e1e2e' : '#cdd6f4') + ';' +
-      'border:1px solid #45475a;border-radius:4px;padding:2px 8px;margin:0 2px;cursor:pointer;font-family:monospace;font-size:11px;' +
-      '">' + s + '</button>';
+    html += '<button onclick="window.__SR_SWITCH_SCENARIO__(\\'' + s + '\\')" style="' +
+      'all:unset;cursor:pointer;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:500;' +
+      'font-family:inherit;transition:background 0.15s,color 0.15s;white-space:nowrap;' +
+      'background:' + (isActive ? '#1a1a1a' : 'transparent') + ';' +
+      'color:' + (isActive ? '#fff' : '#666') + ';' +
+      '" onmouseover="if(!' + isActive + ')this.style.background=\\'rgba(0,0,0,0.04)\\'" ' +
+      'onmouseout="if(!' + isActive + ')this.style.background=\\'transparent\\'"' +
+      '>' + s + '</button>';
   });
-  indicator.innerHTML += switcherHtml;
+
+  indicator.innerHTML = html;
+
+  // Respect prefers-color-scheme
+  var darkMq = window.matchMedia('(prefers-color-scheme: dark)');
+  function applyTheme(dark) {
+    if (dark) {
+      indicator.style.background = 'rgba(30,30,30,0.96)';
+      indicator.style.color = '#e5e5e5';
+      indicator.style.borderColor = 'rgba(255,255,255,0.08)';
+      indicator.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3),0 4px 12px rgba(0,0,0,0.15)';
+    }
+  }
+  applyTheme(darkMq.matches);
+  darkMq.addEventListener('change', function(e) { applyTheme(e.matches); });
 
   document.addEventListener('DOMContentLoaded', function() {
     document.body.appendChild(indicator);
-    document.body.style.paddingBottom = '40px';
+    document.body.style.paddingBottom = '48px';
   });
 
   // Scenario switcher via WebSocket
