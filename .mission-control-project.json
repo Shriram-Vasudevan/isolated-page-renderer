@@ -1,0 +1,8 @@
+{
+  "project_id": 46,
+  "name": "Isolated Page Renderer",
+  "description": "",
+  "workspace_path": "/Users/shriramvasudevan/Documents/GitHub/isolated-page-renderer",
+  "default_provider": "claude",
+  "board_url": "http://localhost:7777"
+}
